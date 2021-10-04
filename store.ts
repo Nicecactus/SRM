@@ -1,4 +1,4 @@
-import { action, Action, createContextStore } from "easy-peasy";
+import { action, Action, createContextStore, thunk, Thunk } from "easy-peasy";
 import EventEmiter, { IEventEmiter } from "./event";
 
 export type Messages = { [term: string]: string };
@@ -23,7 +23,8 @@ export interface ContextStoreModel {
   loadMessages: LoadMessagesFunction;
   eventEmiter: IEventEmiter;
   messages: Messages;
-  setEvent: Action<ContextStoreModel, any | undefined>;
+  setEventState: Action<ContextStoreModel, any | undefined>;
+  setEvent: Thunk<ContextStoreModel, any | undefined, any>;
   event: any;
 }
 
@@ -45,10 +46,14 @@ const ContextStore = createContextStore<ContextStoreModel>(
       messages: {},
       event: {},
       eventEmiter: new EventEmiter(),
-      setEvent: action<ContextStoreModel>((state, value) => {
+      setEventState: action<ContextStoreModel>((state, value) => {
         state.event = value;
-        state.eventEmiter.dispatch(state.event.type, state.event.data);
       }),
+      setEvent: thunk(async (actions, payload, helpers) => {
+        const state = await (helpers.getState());
+        state.eventEmiter.dispatch(payload.type, payload.data);
+        actions.setEventState(payload);
+      })
     }
 );
 
